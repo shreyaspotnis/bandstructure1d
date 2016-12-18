@@ -73,10 +73,6 @@
 
 \begin_body
 
-\begin_layout Section
-Bloch States
-\end_layout
-
 \begin_layout Standard
 The Hamiltonian for a particle in a 1D periodic potential is 
 \begin_inset Formula 
@@ -562,10 +558,6 @@ After this lengthy derivation what we are left with are a set of equations
 
  and hope that our aprroximation would not introduce too many errors.
  
-\end_layout
-
-\begin_layout Section
-Floquet states
 \end_layout
 
 \end_body

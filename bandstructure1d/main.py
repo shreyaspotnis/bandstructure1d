@@ -9,8 +9,9 @@ def calculate_band_structure(n_bands, n_q, lattice_depth):
     Inputs:
         n_bands - Number of bands to include in the calculation. The higher this
         number, the more accurate your results. But note that the calculation
-        involves diagonalizing a (2M+1)*(2M+1) matrix and the time required
-        scales as n_bands^3. For the first 5-6 bands, n_bands=20 is sufficient.
+        involves diagonalizing a (2n_bands+1)*(2n_bands+1) matrix and the time
+        required scales as n_bands^3. For the first 5-6 bands,
+        n_bands=20 is sufficient.
 
         n_q - Number of quasi-momentum to calculate the band structure for. The
         more this number, the finer your plot will look. Note that the
@@ -36,25 +37,14 @@ def calculate_band_structure(n_bands, n_q, lattice_depth):
 
     # create an array of quasimomenta in the first brilluoin zone
     Q = np.arange(-n_q*1.0, n_q*1.0) / n_q
-
-    H = np.zeros((2*n_bands+1, 2*n_bands+1))
-    H_free = np.zeros((2*n_bands+1, 2*n_bands+1))
     E = np.zeros((2*n_q, 2*n_bands+1))
-    E_free = np.zeros((2*n_q, 2*n_bands+1))
-
+    E_free = np.zeros(E.shape)
     u_free = np.zeros((2.0*n_q, 2.0*n_bands+1, 2.0*n_bands+1), complex)
-    u = np.zeros((2.0*n_q, 2.0*n_bands+1, 2.0*n_bands+1), complex)
+    u = np.zeros(u_free.shape, complex)
 
     for i, q in enumerate(Q):
-        # fill up the hamiltonian
-        kinetic = (q+2.0*np.linspace(-n_bands, n_bands, 2*n_bands+1)) ** 2
-        potential = lattice_depth*np.ones(2.0*n_bands)/4.0
-        H_free = np.diag(kinetic, 0)
-        H = H_free+np.diag(potential, 1)+np.diag(potential, -1)
-
-        # diagonalize the hamiltonian
-        energies, eigvectors = lin.eigh(H)
-        energies_free, eigvectors_free = lin.eigh(H_free)
+        out = calculate_band_point(n_bands, q, lattice_depth)
+        (energies, energies_free, eigvectors, eigvectors_free) = out
 
         # store all eigenvalues and eigen-energies
         E[i, :] = energies
@@ -63,6 +53,23 @@ def calculate_band_structure(n_bands, n_q, lattice_depth):
         u_free[i, :] = eigvectors_free
 
     return (Q, E, E_free, u, u_free)
+
+
+def calculate_band_point(n_bands, q, lattice_depth):
+    """Calculate the energy and the block wavefunction at a q and lattice depth.
+    """
+
+    # fill up the hamiltonian
+    kinetic = (q+2.0*np.linspace(-n_bands, n_bands, 2*n_bands+1)) ** 2
+    potential = lattice_depth*np.ones(2.0*n_bands)/4.0
+    H_free = np.diag(kinetic, 0)
+    H = H_free+np.diag(potential, 1)+np.diag(potential, -1)
+
+    # diagonalize the hamiltonian
+    energies, eigvectors = lin.eigh(H)
+    energies_free, eigvectors_free = lin.eigh(H_free)
+
+    return (energies, energies_free, eigvectors, eigvectors_free)
 
 
 def plot_bands(n_plot, Q, E, E_free, show=True):
@@ -85,3 +92,17 @@ def plot_bands(n_plot, Q, E, E_free, show=True):
     plt.xlim(Q.min(), Q.max())
     if show:
         plt.show()
+
+def sideband_ratio(lattice_depth):
+    """Returns the ratio between the first sideband and the carrier for a
+    given lattice depth."""
+
+    n_bands = 20
+    out = calculate_band_point(n_bands, 0, lattice_depth)
+    (energies, energies_free, eigvectors, eigvectors_free) = out
+    eig_ground = eigvectors[:, 0]
+    carrier_amp = eig_ground[n_bands]
+    first_sideband_amp = eig_ground[n_bands + 1]
+
+    ratio_amp = first_sideband_amp/carrier_amp
+    return np.real(ratio_amp*np.conj(ratio_amp))
